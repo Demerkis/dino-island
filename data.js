@@ -385,6 +385,18 @@ const ROOMS = {
           <circle class="dust dust2" cx="500" cy="230" r="1.6" fill="#fff6d8" opacity="0.4"/>
           <circle class="dust dust3" cx="360" cy="140" r="1.4" fill="#fff6d8" opacity="0.35"/>
 
+          <!-- bunker hatch -->
+          <g transform="translate(8,296)">
+            <rect x="0" y="34" width="54" height="116" fill="#2b3238" stroke="#161a1e" stroke-width="3"/>
+            <rect x="6" y="40" width="42" height="104" fill="#3a4650" stroke="#20282e" stroke-width="2"/>
+            ${[0,1,2,3].map(i => `<circle cx="${11+i*11}" cy="46" r="2" fill="#161a1e"/>`).join('')}
+            ${[0,1,2,3].map(i => `<circle cx="${11+i*11}" cy="138" r="2" fill="#161a1e"/>`).join('')}
+            <circle cx="27" cy="92" r="15" fill="none" stroke="#9aabb5" stroke-width="4"/>
+            <line x1="27" y1="77" x2="27" y2="107" stroke="#9aabb5" stroke-width="3"/>
+            <line x1="12" y1="92" x2="42" y2="92" stroke="#9aabb5" stroke-width="3"/>
+            <rect x="18" y="118" width="18" height="7" fill="#e8c15a" opacity="0.75"/>
+          </g>
+
           <!-- desk -->
           <g transform="translate(60,270)">
             <rect x="0" y="30" width="150" height="12" fill="#5a4028"/>
@@ -668,11 +680,18 @@ const ROOMS = {
           <g transform="translate(120,150)">
             <rect x="0" y="0" width="220" height="190" fill="none" stroke="#4a5560" stroke-width="6"/>
             ${[0,1,2,3,4,5,6,7,8,9,10].map(i => `<line x1="${i*22}" y1="0" x2="${i*22}" y2="190" stroke="#3a444d" stroke-width="3"/>`).join('')}
-            <g class="raptor" transform="translate(60,90)">
-              <path d="M0 60 Q10 20 55 15 Q95 12 110 30 L100 40 Q80 30 55 34 Q25 38 15 65 Z" fill="#5c6b4a"/>
-              <path class="raptor-tail" d="M0 55 Q-30 50 -46 30" stroke="#5c6b4a" stroke-width="10" fill="none" stroke-linecap="round"/>
-              <circle class="raptor-eye" cx="98" cy="26" r="3" fill="#ffe08a"/>
-              <path d="M55 34 Q40 60 20 66" stroke="#48543a" stroke-width="6" fill="none"/>
+            <g class="raptor" transform="translate(58,105)">
+              <polygon class="raptor-tail" points="-3,-8 -36,-1 -62,12 -20,7 0,8" fill="#5c6b4a"/>
+              <path d="M2,8 L12,26 L8,40" stroke="#48543a" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.85"/>
+              <polygon points="-3,-8 16,-20 36,-27 49,-38 65,-39 85,-31 71,-22 55,-25 39,-8 20,5 0,8" fill="#5c6b4a"/>
+              <path d="M12,6 L30,24 L24,42" stroke="#5c6b4a" stroke-width="11" fill="none" stroke-linecap="round"/>
+              <polygon points="24,42 34,45 27,50" fill="#5c6b4a"/>
+              <path d="M22,40 Q13,37 9,29 Q15,32 21,37 Z" fill="#3a4636"/>
+              <path d="M34,-10 L29,2 L26,6" stroke="#5c6b4a" stroke-width="5" fill="none" stroke-linecap="round"/>
+              <polygon points="60,-24 63,-24 61,-19" fill="#e8ddc0"/>
+              <polygon points="68,-25 71,-25 69,-20" fill="#e8ddc0"/>
+              <polygon points="76,-27 79,-27 77,-22" fill="#e8ddc0"/>
+              <circle class="raptor-eye" cx="58" cy="-33" r="2.2" fill="#ffe08a"/>
             </g>
           </g>
 
