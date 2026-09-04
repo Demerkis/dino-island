@@ -1,0 +1,195 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #14161c;
+  color: #eee;
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+#game {
+  width: 800px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  background: #0c0c10;
+}
+
+#stage {
+  position: relative;
+  width: 800px;
+  height: 450px;
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+#room {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#room-bg {
+  position: absolute;
+  inset: 0;
+}
+#room-bg svg { display: block; }
+
+#hotspots {
+  position: absolute;
+  inset: 0;
+}
+
+.hotspot {
+  position: absolute;
+  cursor: pointer;
+}
+
+#character {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 44px;
+  height: 84px;
+  pointer-events: none;
+  will-change: transform;
+}
+#char-inner { width: 100%; height: 100%; }
+#char-inner svg { display: block; overflow: visible; }
+
+.leg-l { transform-origin: 18px 52px; }
+.leg-r { transform-origin: 26px 52px; }
+.walking .leg-l { animation: legswingL 0.4s ease-in-out infinite; }
+.walking .leg-r { animation: legswingR 0.4s ease-in-out infinite; }
+@keyframes legswingL { 0%{transform:rotate(-16deg);} 50%{transform:rotate(16deg);} 100%{transform:rotate(-16deg);} }
+@keyframes legswingR { 0%{transform:rotate(16deg);} 50%{transform:rotate(-16deg);} 100%{transform:rotate(16deg);} }
+
+#fade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.26s ease;
+}
+#fade.active { opacity: 1; }
+
+#textline {
+  height: 34px;
+  background: #0c0c10;
+  color: #f2e6b8;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 14px;
+  border-top: 2px solid #2a2a33;
+  border-bottom: 2px solid #2a2a33;
+  min-height: 34px;
+}
+
+#dialogue-panel {
+  background: #1a1a22;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 2px solid #2a2a33;
+}
+#dialogue-panel.hidden { display: none; }
+.dlg-topic {
+  background: none;
+  border: none;
+  color: #9fd3ff;
+  text-align: left;
+  font-size: 13px;
+  padding: 3px 2px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.dlg-topic:hover { color: #fff; text-decoration: underline; }
+.dlg-bye { color: #d38a8a; }
+
+#ui {
+  display: flex;
+  background: #1a1a22;
+  padding: 10px;
+  gap: 12px;
+}
+
+#verbs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 26px;
+  gap: 4px;
+  width: 300px;
+  flex-shrink: 0;
+}
+
+.verb-btn {
+  background: #262633;
+  border: 1px solid #3a3a4a;
+  color: #cfd3e6;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-family: inherit;
+}
+.verb-btn:hover { background: #33334a; }
+.verb-btn.active { background: #e8c15a; color: #26261a; border-color: #e8c15a; font-weight: bold; }
+
+#inventory {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-auto-rows: 40px;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.inv-item {
+  background: #22222c;
+  border: 1px solid #3a3a4a;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 3px;
+}
+.inv-item:hover { background: #2c2c3a; }
+.inv-item.active { border-color: #e8c15a; box-shadow: 0 0 0 2px #e8c15a inset; }
+.inv-item svg { width: 100%; height: 100%; }
+
+#ending-overlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  color: #eaffea;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+  z-index: 10;
+}
+#ending-overlay.active { opacity: 1; }
+#ending-overlay h1 {
+  font-size: 40px;
+  letter-spacing: 4px;
+  margin: 0 0 18px;
+  color: #8fffe0;
+  text-shadow: 0 0 20px rgba(143,255,224,0.6);
+}
+#ending-overlay p { max-width: 560px; line-height: 1.6; color: #cdeee0; font-size: 15px; }
+.ending-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(143,255,224,0.25), transparent 60%);
+  animation: pulseglow 3s ease-in-out infinite;
+}
+@keyframes pulseglow { 0%,100%{opacity:0.5;} 50%{opacity:1;} }

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dino Island — POC</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game">
+    <div id="stage">
+      <div id="room">
+        <div id="room-bg"></div>
+        <div id="hotspots"></div>
+        <div id="character">
+          <div id="char-inner">
+            <svg viewBox="0 0 44 84" width="44" height="84">
+              <ellipse cx="22" cy="80" rx="14" ry="4" fill="#000" opacity="0.25"/>
+              <rect class="leg leg-l" x="14" y="52" width="8" height="26" rx="3" fill="#33475b"/>
+              <rect class="leg leg-r" x="22" y="52" width="8" height="26" rx="3" fill="#233343"/>
+              <rect x="10" y="24" width="24" height="32" rx="8" fill="#c94f4f"/>
+              <circle cx="22" cy="14" r="12" fill="#e0a877"/>
+              <path d="M10 12 Q22 -2 34 12 Q34 4 22 2 Q10 4 10 12" fill="#2b2b2b"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div id="fade"></div>
+    </div>
+
+    <div id="textline"><span id="textline-content">&nbsp;</span></div>
+
+    <div id="dialogue-panel" class="hidden"></div>
+
+    <div id="ui">
+      <div id="verbs"></div>
+      <div id="inventory"></div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
