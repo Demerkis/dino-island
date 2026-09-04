@@ -290,32 +290,74 @@ body {
 }
 #mute-btn:hover { background: rgba(0,0,0,0.6); }
 
+#lang-btn {
+  position: absolute;
+  top: 8px;
+  right: 46px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 7px;
+  border-radius: 15px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(0,0,0,0.4);
+  color: #fff;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#lang-btn:hover { background: rgba(0,0,0,0.6); }
+
+/* ===== boat arrival intro ===== */
+.boat-intro { animation: boatArrive 2.2s cubic-bezier(0.22,0.61,0.36,1) forwards; }
+@keyframes boatArrive {
+  from { transform: translate(840px, 300px) rotate(-3deg); }
+  to   { transform: translate(60px, 300px) rotate(0deg); }
+}
+
 /* ===== title screen ===== */
 #title-screen {
   position: absolute;
   inset: 0;
   z-index: 20;
+  overflow: hidden;
+  background: linear-gradient(180deg, #1b1f3a 0%, #3a2f4a 35%, #6b4a5a 58%, #2e4a55 78%, #163035 100%);
+}
+#title-screen.hidden { display: none; }
+#title-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+#title-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   padding: 40px;
-  background: linear-gradient(180deg, #bfe6f7 0%, #eaf7ea 55%, #4f9dbf 55%, #2e6f8f 100%);
 }
-#title-screen.hidden { display: none; }
 #title-screen h1 {
   font-size: 48px;
   letter-spacing: 6px;
   margin: 0 0 6px;
-  color: #2c4a3a;
-  text-shadow: 0 2px 0 rgba(255,255,255,0.4);
+  color: #e8c15a;
+  text-shadow: 0 2px 14px rgba(0,0,0,0.6);
 }
 #title-screen .tagline {
   margin: 0 0 30px;
-  color: #234a55;
+  color: #d9c3cd;
   font-size: 14px;
   font-style: italic;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.5);
 }
 #title-buttons { display: flex; gap: 14px; }
 

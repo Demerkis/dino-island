@@ -25,6 +25,7 @@
         </div>
       </div>
       <div id="fade"></div>
+      <button id="lang-btn" title="Switch language">FR</button>
       <button id="mute-btn" title="Mute/unmute">🔊</button>
       <div id="save-toast">Saved</div>
     </div>
@@ -39,11 +40,43 @@
     </div>
 
     <div id="title-screen">
-      <h1>DINO ISLAND</h1>
-      <p class="tagline">A point-and-click prototype</p>
-      <div id="title-buttons">
-        <button id="btn-continue" class="title-btn hidden">Continue</button>
-        <button id="btn-start" class="title-btn">Start</button>
+      <svg id="title-art" viewBox="0 0 800 620" preserveAspectRatio="xMidYMid slice">
+        <g class="raptor-mark" transform="translate(400,300) scale(3.4) rotate(-4)">
+          <path d="M0 60 Q10 20 55 15 Q95 12 110 30 L100 40 Q80 30 55 34 Q25 38 15 65 Z" fill="#05070d" opacity="0.26"/>
+          <path d="M0 55 Q-30 50 -46 30" stroke="#05070d" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.26"/>
+        </g>
+        <g class="footprint" transform="translate(560,120) rotate(18)">
+          <ellipse cx="0" cy="10" rx="7" ry="11" fill="#05070d" opacity="0.16"/>
+          <ellipse cx="-6" cy="-6" rx="3" ry="4" fill="#05070d" opacity="0.16"/>
+          <ellipse cx="0" cy="-9" rx="3" ry="4.5" fill="#05070d" opacity="0.16"/>
+          <ellipse cx="6" cy="-6" rx="3" ry="4" fill="#05070d" opacity="0.16"/>
+        </g>
+        <g class="footprint" transform="translate(500,190) rotate(10)">
+          <ellipse cx="0" cy="10" rx="7" ry="11" fill="#05070d" opacity="0.16"/>
+          <ellipse cx="-6" cy="-6" rx="3" ry="4" fill="#05070d" opacity="0.16"/>
+          <ellipse cx="0" cy="-9" rx="3" ry="4.5" fill="#05070d" opacity="0.16"/>
+          <ellipse cx="6" cy="-6" rx="3" ry="4" fill="#05070d" opacity="0.16"/>
+        </g>
+        <g class="footprint" transform="translate(450,440) rotate(-6)">
+          <ellipse cx="0" cy="10" rx="7" ry="11" fill="#05070d" opacity="0.14"/>
+          <ellipse cx="-6" cy="-6" rx="3" ry="4" fill="#05070d" opacity="0.14"/>
+          <ellipse cx="0" cy="-9" rx="3" ry="4.5" fill="#05070d" opacity="0.14"/>
+          <ellipse cx="6" cy="-6" rx="3" ry="4" fill="#05070d" opacity="0.14"/>
+        </g>
+        <g class="footprint" transform="translate(400,500) rotate(-14)">
+          <ellipse cx="0" cy="10" rx="7" ry="11" fill="#05070d" opacity="0.14"/>
+          <ellipse cx="-6" cy="-6" rx="3" ry="4" fill="#05070d" opacity="0.14"/>
+          <ellipse cx="0" cy="-9" rx="3" ry="4.5" fill="#05070d" opacity="0.14"/>
+          <ellipse cx="6" cy="-6" rx="3" ry="4" fill="#05070d" opacity="0.14"/>
+        </g>
+      </svg>
+      <div id="title-content">
+        <h1>DINO ISLAND</h1>
+        <p class="tagline">A point-and-click prototype</p>
+        <div id="title-buttons">
+          <button id="btn-continue" class="title-btn hidden">Continue</button>
+          <button id="btn-start" class="title-btn">Start</button>
+        </div>
       </div>
     </div>
   </div>

@@ -228,17 +228,20 @@ const AudioEngine = (() => {
   /* ===== music: a tiny note sequencer, layered quietly under the ambience above ===== */
 
   const NOTE_FREQ = {
-    A3: 220.00, B3: 246.94, C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00,
+    A2: 110.00, A3: 220.00, B3: 246.94, C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00,
     A4: 440.00, B4: 493.88, C5: 523.25, D5: 587.33, E5: 659.25, G5: 783.99,
   };
 
-  // Each theme: beatMs = duration of one beat unit; notes = [noteName|null, beats][].
+  // Each theme: beatMs = duration of one beat unit; notes = [noteName|null, beats][];
+  // an optional `drone` adds a sustained low undertone for the duration of the theme.
   const THEMES = {
     title: {
-      beatMs: 230, type: 'triangle', gain: 0.09,
+      beatMs: 340, type: 'triangle', gain: 0.1,
+      drone: { note: 'A2', gain: 0.05 },
       notes: [
-        ['C4',1],['E4',1],['G4',1],['E4',1],['A4',1],['G4',1],['E4',1],['D4',1],
-        ['C4',1],['E4',1],['G4',1],['A4',1],['G4',1],['E4',1],['D4',1],[null,1],
+        ['A3',2],['C4',1],['D4',1],['E4',2],[null,1],
+        ['F4',1],['E4',1],['D4',2],['C4',1],[null,1],
+        ['A3',2],['E4',1],['D4',1],['C4',2],[null,2],
       ],
     },
     dock: {
@@ -262,13 +265,42 @@ const AudioEngine = (() => {
   let musicGain = null;
   let musicTimer = null;
   let currentThemeId = null;
+  let droneOsc = null;
+  let droneGain = null;
 
   function ensureMusicGain() {
     if (!musicGain) {
       musicGain = ctx.createGain();
-      musicGain.gain.value = 1;
+      musicGain.gain.value = 2.3;
       musicGain.connect(masterGain);
     }
+  }
+
+  function startDrone(theme) {
+    if (!theme.drone) return;
+    droneOsc = ctx.createOscillator();
+    droneOsc.type = 'sine';
+    droneOsc.frequency.value = NOTE_FREQ[theme.drone.note] || 110;
+    droneGain = ctx.createGain();
+    const t = ctx.currentTime;
+    droneGain.gain.setValueAtTime(0.0001, t);
+    droneGain.gain.linearRampToValueAtTime(theme.drone.gain, t + 1.2);
+    droneOsc.connect(droneGain);
+    droneGain.connect(musicGain);
+    droneOsc.start();
+  }
+
+  function stopDrone() {
+    if (!droneOsc) return;
+    try {
+      const t = ctx.currentTime;
+      droneGain.gain.cancelScheduledValues(t);
+      droneGain.gain.setValueAtTime(droneGain.gain.value, t);
+      droneGain.gain.linearRampToValueAtTime(0.0001, t + 0.4);
+      droneOsc.stop(t + 0.45);
+    } catch (e) {}
+    droneOsc = null;
+    droneGain = null;
   }
 
   function scheduleNote(freq, startTime, durSec, type, gainVal) {
@@ -299,6 +331,7 @@ const AudioEngine = (() => {
 
   function stopMusic() {
     if (musicTimer) { clearTimeout(musicTimer); musicTimer = null; }
+    stopDrone();
     currentThemeId = null;
   }
 
@@ -309,6 +342,7 @@ const AudioEngine = (() => {
     if (!theme) return;
     ensureMusicGain();
     currentThemeId = themeId;
+    startDrone(theme);
     const loop = () => {
       const dur = playThemeOnce(theme, ctx.currentTime + 0.05);
       musicTimer = setTimeout(loop, dur * 1000);

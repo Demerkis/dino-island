@@ -1,9 +1,9 @@
 /* ===================== Dino Island — engine ===================== */
 
-const VERB_KEYS = {
-  'Open': 'open', 'Close': 'close', 'Pick up': 'pickup', 'Look at': 'look',
-  'Talk to': 'talk', 'Push': 'push', 'Pull': 'pull', 'Use': 'use', 'Give': 'give',
-};
+let lang = 'en';
+try { lang = localStorage.getItem('dinoIslandLang') || 'en'; } catch (e) {}
+
+function t(en, fr) { return lang === 'fr' ? fr : en; }
 
 const state = {
   currentRoomId: null,
@@ -16,10 +16,13 @@ const state = {
   busy: false,
   dialogueOpen: false,
   gameOver: false,
+  introPlaying: false,
   lastMessage: '',
 };
 
 let roomBgEl, hotspotsEl, characterEl, charInnerEl, textEl, verbsEl, inventoryEl, fadeEl, dialogueEl, roomEl, stageEl;
+
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 /* ===================== Geometry helpers ===================== */
 
@@ -67,13 +70,13 @@ function removeItem(state, itemId) {
   renderRoom();
 }
 
-function goToRoom(state, roomId) {
+function goToRoom(state, roomId, arrivalPoint) {
   if (state.currentRoomId === roomId) return '';
   fadeEl.classList.add('active');
   setTimeout(() => {
     state.currentRoomId = roomId;
     const room = ROOMS[roomId];
-    state.pos = { ...room.entryPoint };
+    state.pos = arrivalPoint ? { ...arrivalPoint } : { ...room.entryPoint };
     state.facing = 'right';
     state.selectedVerb = null;
     state.selectedItem = null;
@@ -104,7 +107,7 @@ function closeDialogue() {
 }
 
 function renderDialogue() {
-  const topics = SCIENTIST_TOPICS.filter(t => t.condition(state));
+  const topics = SCIENTIST_TOPICS.filter(topic => topic.condition(state));
   dialogueEl.classList.remove('hidden');
   dialogueEl.innerHTML = '';
 
@@ -118,13 +121,13 @@ function renderDialogue() {
 
   const topicsWrap = document.createElement('div');
   topicsWrap.className = 'dlg-topics';
-  topics.forEach(t => {
+  topics.forEach(topic => {
     const btn = document.createElement('button');
     btn.className = 'dlg-topic';
-    btn.textContent = t.label;
+    btn.textContent = topic.label();
     btn.addEventListener('click', () => {
       AudioEngine.playUIBlip();
-      const response = t.respond(state);
+      const response = topic.respond(state);
       setText(response);
       renderInventory();
       renderDialogue();
@@ -135,7 +138,7 @@ function renderDialogue() {
   });
   const bye = document.createElement('button');
   bye.className = 'dlg-topic dlg-bye';
-  bye.textContent = 'Goodbye.';
+  bye.textContent = t('Goodbye.', 'Au revoir.');
   bye.addEventListener('click', () => { AudioEngine.playUIBlip(); closeDialogue(); });
   topicsWrap.appendChild(bye);
   dialogueEl.appendChild(topicsWrap);
@@ -172,7 +175,7 @@ function setText(msg) {
 }
 
 function skipTextReveal() {
-  if (!textRevealing) return;
+  if (!textRevealing || state.introPlaying) return;
   textEl.textContent = state.lastMessage;
   textRevealing = false;
   textGen++;
@@ -187,7 +190,12 @@ function showHover(msg) {
 function restoreText() {
   textGen++;
   textRevealing = false;
-  textEl.textContent = state.lastMessage || ' ';
+  textEl.textContent = state.lastMessage || ' ';
+}
+
+function verbLabelFor(key) {
+  const v = VERBS.find(v => v.key === key);
+  return v ? t(v.en, v.fr) : t('Look at', 'Regarder');
 }
 
 function renderVerbs() {
@@ -195,10 +203,9 @@ function renderVerbs() {
   VERBS.forEach(v => {
     const btn = document.createElement('button');
     btn.className = 'verb-btn';
-    btn.textContent = v;
-    btn.dataset.verb = v;
-    if (state.selectedVerb === v) btn.classList.add('active');
-    btn.addEventListener('click', () => onVerbClick(v));
+    btn.textContent = t(v.en, v.fr);
+    if (state.selectedVerb === v.key) btn.classList.add('active');
+    btn.addEventListener('click', () => onVerbClick(v.key));
     verbsEl.appendChild(btn);
   });
 }
@@ -221,10 +228,10 @@ function renderInventory() {
     el.className = 'inv-item';
     if (state.selectedItem === itemId) el.classList.add('active');
     el.innerHTML = item.icon;
-    el.title = item.name;
+    el.title = item.name();
     el.addEventListener('click', () => onItemClick(itemId));
     inventoryEl.appendChild(el);
-    inventoryHoverMap.set(el, item.name);
+    inventoryHoverMap.set(el, item.name());
   });
 }
 
@@ -255,9 +262,11 @@ function setupHoverDelegation() {
     let el = null, text = null;
     if (hotspotEl && hotspotHoverMap.has(hotspotEl)) {
       const h = hotspotHoverMap.get(hotspotEl);
-      const verbLabel = state.selectedItem ? `Use ${ITEMS[state.selectedItem].name} with` : (state.selectedVerb || 'Look at');
+      const verbLabel = state.selectedItem
+        ? t(`Use ${ITEMS[state.selectedItem].name()} with`, `Utiliser ${ITEMS[state.selectedItem].name()} avec`)
+        : verbLabelFor(state.selectedVerb);
       el = hotspotEl;
-      text = `${verbLabel} ${h.name}`;
+      text = `${verbLabel} ${h.name()}`;
     } else if (invEl && inventoryHoverMap.has(invEl)) {
       el = invEl;
       text = inventoryHoverMap.get(invEl);
@@ -317,60 +326,58 @@ function walkTo(target) {
 
 /* ===================== Input handling ===================== */
 
-function onVerbClick(verb) {
-  if (state.gameOver) return;
+function onVerbClick(key) {
+  if (state.gameOver || state.introPlaying) return;
   AudioEngine.playUIBlip();
-  state.selectedVerb = (state.selectedVerb === verb) ? null : verb;
+  state.selectedVerb = (state.selectedVerb === key) ? null : key;
   state.selectedItem = null;
   renderVerbs();
   renderInventory();
 }
 
 function onItemClick(itemId) {
-  if (state.gameOver || state.dialogueOpen) return;
+  if (state.gameOver || state.dialogueOpen || state.introPlaying) return;
 
-  const verbKey = state.selectedVerb ? VERB_KEYS[state.selectedVerb] : null;
-
-  if (verbKey === 'look') {
-    const item = ITEMS[itemId];
-    if (item.look === 'READ_NOTE') {
-      state.flags.knowsCode = true;
-      setText("A hasty scrawl: '7-2-9-4. Don't forget it this time. —M' Huh. Handy.");
-      saveGame();
-    } else {
-      setText(item.look);
-    }
-    state.selectedVerb = null;
-    renderVerbs();
-    return;
-  }
-
-  if (verbKey === 'give') {
-    setText("Give it to... myself? That seems unnecessary.");
-    state.selectedVerb = null;
-    renderVerbs();
-    return;
-  }
-
-  if (verbKey && verbKey !== 'use') {
-    setText(fallback(verbKey));
-    state.selectedVerb = null;
-    renderVerbs();
-    return;
-  }
-
-  // 'use' verb pending, or free item-select for combine
+  // An item is already pending and a different item was clicked: combine them,
+  // regardless of which verb (if any) is currently active.
   if (state.selectedItem && state.selectedItem !== itemId) {
     tryCombine(state.selectedItem, itemId);
     return;
   }
 
-  AudioEngine.playUIBlip();
-  state.selectedItem = (state.selectedItem === itemId) ? null : itemId;
+  const verbKey = state.selectedVerb;
+
+  if (verbKey === 'use' || verbKey === 'give') {
+    AudioEngine.playUIBlip();
+    state.selectedItem = (state.selectedItem === itemId) ? null : itemId;
+    renderVerbs();
+    renderInventory();
+    if (state.selectedItem) {
+      const name = ITEMS[state.selectedItem].name();
+      setText(verbKey === 'give'
+        ? t(`Give the ${name} to whom?`, `Donner ${name} à qui ?`)
+        : t(`${name}. Use it on something.`, `${name}. À utiliser sur quelque chose.`));
+    }
+    return;
+  }
+
+  // No verb, or any verb other than Use/Give: default to Look at, matching how
+  // hotspots already behave when nothing is selected.
+  const item = ITEMS[itemId];
+  if (!verbKey || verbKey === 'look') {
+    if (item.look === 'READ_NOTE') {
+      state.flags.knowsCode = true;
+      setText(t("A hasty scrawl: '7-2-9-4. Don't forget it this time. —M' Huh. Handy.",
+                "Une note griffonnée à la hâte : « 7-2-9-4. Ne pas l'oublier cette fois. —M ». Tiens, pratique."));
+      saveGame();
+    } else {
+      setText(item.look());
+    }
+  } else {
+    setText(fallback(verbKey));
+  }
   state.selectedVerb = null;
   renderVerbs();
-  renderInventory();
-  if (state.selectedItem) setText(`${ITEMS[state.selectedItem].name}. Use it on something.`);
 }
 
 function tryCombine(itemA, itemB) {
@@ -380,9 +387,9 @@ function tryCombine(itemA, itemB) {
     removeItem(state, itemA);
     removeItem(state, itemB);
     addItem(state, combo.result);
-    setText(combo.text);
+    setText(combo.text());
   } else {
-    setText("Those two don't go together.");
+    setText(t("Those two don't go together.", "Ces deux objets ne vont pas ensemble."));
   }
   state.selectedItem = null;
   state.selectedVerb = null;
@@ -392,7 +399,7 @@ function tryCombine(itemA, itemB) {
 }
 
 async function onHotspotClick(hotspot) {
-  if (state.busy || state.gameOver || state.dialogueOpen) return;
+  if (state.busy || state.gameOver || state.dialogueOpen || state.introPlaying) return;
 
   const usingItem = state.selectedItem;
   const verb = state.selectedVerb;
@@ -402,15 +409,14 @@ async function onHotspotClick(hotspot) {
 
   let result;
   if (usingItem) {
-    if (VERB_KEYS[verb] === 'give') {
+    if (verb === 'give') {
       result = hotspot.actions.give ? hotspot.actions.give(state, usingItem) : fallback('give');
     } else {
       result = hotspot.actions.use ? hotspot.actions.use(state, usingItem) : fallback('use');
     }
   } else if (verb) {
-    const key = VERB_KEYS[verb];
-    const handler = hotspot.actions[key];
-    result = handler ? handler(state, null) : fallback(key);
+    const handler = hotspot.actions[verb];
+    result = handler ? handler(state, null) : fallback(verb);
   } else if (hotspot.isExit && hotspot.actions.go) {
     result = hotspot.actions.go(state);
   } else {
@@ -425,13 +431,14 @@ async function onHotspotClick(hotspot) {
   if (result === 'ENDING') {
     playEnding();
   } else {
+    renderRoom();
     if (result) setText(result);
     saveGame();
   }
 }
 
 function onGroundClick(evt) {
-  if (state.busy || state.gameOver || state.dialogueOpen) return;
+  if (state.busy || state.gameOver || state.dialogueOpen || state.introPlaying) return;
   if (evt.target.closest('.hotspot')) return;
   if (state.selectedVerb || state.selectedItem) {
     state.selectedVerb = null;
@@ -453,14 +460,16 @@ function playEnding() {
   clearSave();
   AudioEngine.stopAmbience();
   AudioEngine.stopMusic();
-  setText("The door hangs open. Whatever Specimen 07's neighbor was, it isn't in there anymore.");
+  setText(t("The door hangs open. Whatever Specimen 07's neighbor was, it isn't in there anymore.",
+            "La porte est grande ouverte. Quoi qu'ait été le voisin du Spécimen 07, il n'est plus là."));
   const overlay = document.createElement('div');
   overlay.id = 'ending-overlay';
   overlay.innerHTML = `
     <div class="ending-glow"></div>
-    <h1>TO BE CONTINUED...</h1>
-    <p>Bent steel. An empty cage. And somewhere in the dark beyond the blast door, something that's been loose for who knows how long.<br>Whatever happens next, that's the problem now.</p>
-    <button id="btn-play-again" class="title-btn">Play Again</button>
+    <h1>${t('TO BE CONTINUED...', 'À SUIVRE...')}</h1>
+    <p>${t("Bent steel. An empty cage. And somewhere in the dark beyond the blast door, something that's been loose for who knows how long.<br>Whatever happens next, that's the problem now.",
+           "De l'acier tordu. Une cage vide. Et quelque part dans le noir, au-delà de la porte blindée, quelque chose est en liberté depuis on ne sait combien de temps.<br>Quoi qu'il arrive ensuite, c'est désormais le problème.")}</p>
+    <button id="btn-play-again" class="title-btn">${t('Play Again', 'Rejouer')}</button>
   `;
   document.getElementById('game').appendChild(overlay);
   setTimeout(() => overlay.classList.add('active'), 20);
@@ -481,12 +490,11 @@ function restartGame() {
   state.dialogueOpen = false;
   state.gameOver = false;
   state.busy = false;
+  state.introPlaying = false;
   closeDialogue();
 
-  const continueBtn = document.getElementById('btn-continue');
-  const startBtn = document.getElementById('btn-start');
-  continueBtn.classList.add('hidden');
-  startBtn.textContent = 'Start';
+  document.getElementById('btn-continue').classList.add('hidden');
+  applyChrome();
   document.getElementById('title-screen').classList.remove('hidden');
 }
 
@@ -529,6 +537,23 @@ function clearSave() {
   try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
 }
 
+/* ===================== Chrome (title/ending/mute/toast static text) ===================== */
+
+function applyChrome() {
+  const tagline = document.querySelector('#title-screen .tagline');
+  if (tagline) tagline.textContent = t('A point-and-click prototype', 'Un prototype point-and-click');
+  const startBtn = document.getElementById('btn-start');
+  const continueBtn = document.getElementById('btn-continue');
+  if (startBtn) startBtn.textContent = loadGame() ? t('New Game', 'Nouvelle partie') : t('Start', 'Commencer');
+  if (continueBtn) continueBtn.textContent = t('Continue', 'Continuer');
+  const muteBtn = document.getElementById('mute-btn');
+  if (muteBtn) muteBtn.title = t('Mute/unmute', 'Son actif/coupé');
+  const langBtn = document.getElementById('lang-btn');
+  if (langBtn) langBtn.title = t('Switch language', 'Changer de langue');
+  const toast = document.getElementById('save-toast');
+  if (toast) toast.textContent = t('Saved', 'Enregistré');
+}
+
 /* ===================== Init ===================== */
 
 function setupMuteButton() {
@@ -536,6 +561,22 @@ function setupMuteButton() {
   function refresh() { btn.textContent = AudioEngine.isMuted() ? '🔇' : '🔊'; }
   refresh();
   btn.addEventListener('click', () => { AudioEngine.toggleMute(); refresh(); });
+}
+
+function setupLangButton() {
+  const btn = document.getElementById('lang-btn');
+  function refresh() { btn.textContent = lang === 'fr' ? 'EN' : 'FR'; }
+  refresh();
+  btn.addEventListener('click', () => {
+    lang = lang === 'fr' ? 'en' : 'fr';
+    try { localStorage.setItem('dinoIslandLang', lang); } catch (e) {}
+    refresh();
+    applyChrome();
+    renderVerbs();
+    renderInventory();
+    if (state.currentRoomId) renderRoom();
+    if (state.dialogueOpen) renderDialogue();
+  });
 }
 
 /* One-time DOM wiring — must run exactly once per page load, even though a game can be
@@ -556,12 +597,32 @@ function setupOnce() {
   roomEl.addEventListener('click', onGroundClick);
   setupHoverDelegation();
   setupMuteButton();
+  setupLangButton();
   document.getElementById('textline').addEventListener('click', skipTextReveal);
+  applyChrome();
 }
 
 function triggerShake() {
   stageEl.classList.add('shake');
   setTimeout(() => stageEl.classList.remove('shake'), 450);
+}
+
+/* Non-interactive boat-arrival opening, played once at the start of a brand-new game
+   (never on Continue). Not skippable. */
+async function playIntro() {
+  state.introPlaying = true;
+  characterEl.style.visibility = 'hidden';
+  renderRoom();
+  await sleep(2300);
+  characterEl.style.visibility = 'visible';
+  state.pos = { x: 100, y: 400 };
+  state.facing = 'right';
+  updateCharacterPosition();
+  await walkTo({ ...ROOMS.dock.entryPoint });
+  state.introPlaying = false;
+  setText(t("The dock creaks underfoot. Not exactly the tropical paradise the brochure promised.",
+            "Le ponton craque sous mes pas. Pas vraiment le paradis tropical promis par la brochure."));
+  saveGame();
 }
 
 /* Runs every time a game session begins (fresh Start, Continue, or Play Again → Start). */
@@ -581,9 +642,12 @@ function startGame(save) {
   updateCharacterPosition();
   AudioEngine.startAmbience(state.currentRoomId);
   AudioEngine.playMusic(state.currentRoomId);
-  setText(save
-    ? "Right, where was I..."
-    : "The dock creaks underfoot. Not exactly the tropical paradise the brochure promised.");
+
+  if (save) {
+    setText(t("Right, where was I...", "Bon, où en étais-je..."));
+  } else {
+    playIntro();
+  }
 }
 
 function beginGame(save) {
@@ -602,8 +666,8 @@ function initTitleScreen() {
   const startBtn = document.getElementById('btn-start');
   if (loadGame()) {
     continueBtn.classList.remove('hidden');
-    startBtn.textContent = 'New Game';
   }
+  applyChrome();
   continueBtn.addEventListener('click', () => beginGame(loadGame()));
   startBtn.addEventListener('click', () => beginGame(null));
 }
