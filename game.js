@@ -80,6 +80,8 @@ function goToRoom(state, roomId) {
     renderVerbs();
     renderRoom();
     updateCharacterPosition();
+    AudioEngine.startAmbience(roomId);
+    saveGame();
     setTimeout(() => fadeEl.classList.remove('active'), 30);
   }, 260);
   return '';
@@ -105,33 +107,50 @@ function renderDialogue() {
     btn.className = 'dlg-topic';
     btn.textContent = t.label;
     btn.addEventListener('click', () => {
+      AudioEngine.playUIBlip();
       const response = t.respond(state);
       setText(response);
       renderInventory();
       renderDialogue();
+      saveGame();
     });
     dialogueEl.appendChild(btn);
   });
   const bye = document.createElement('button');
   bye.className = 'dlg-topic dlg-bye';
   bye.textContent = 'Goodbye.';
-  bye.addEventListener('click', closeDialogue);
+  bye.addEventListener('click', () => { AudioEngine.playUIBlip(); closeDialogue(); });
   dialogueEl.appendChild(bye);
 }
 
 /* ===================== Rendering ===================== */
 
+let textGen = 0;
+
 function setText(msg) {
   if (!msg) return;
   state.lastMessage = msg;
-  textEl.textContent = msg;
+  const myGen = ++textGen;
+  textEl.textContent = '';
+  let i = 0;
+  function tick() {
+    if (myGen !== textGen) return;
+    if (i >= msg.length) return;
+    textEl.textContent += msg[i];
+    i++;
+    if (i % 2 === 0) AudioEngine.playTalkBlip();
+    setTimeout(tick, 16);
+  }
+  tick();
 }
 
 function showHover(msg) {
+  textGen++;
   textEl.textContent = msg;
 }
 
 function restoreText() {
+  textGen++;
   textEl.textContent = state.lastMessage || ' ';
 }
 
@@ -237,11 +256,17 @@ function walkTo(target) {
     const speed = 260;
     const duration = Math.max(150, (dist / speed) * 1000);
     const startTime = performance.now();
+    let lastStepSound = 0;
     state.busy = true;
     function step() {
-      const t = Math.min(1, (performance.now() - startTime) / duration);
+      const now = performance.now();
+      const t = Math.min(1, (now - startTime) / duration);
       state.pos = { x: start.x + dx * t, y: start.y + dy * t };
       updateCharacterPosition();
+      if (now - lastStepSound > 260) {
+        AudioEngine.playFootstep();
+        lastStepSound = now;
+      }
       if (t < 1) {
         setTimeout(step, 16);
       } else {
@@ -258,6 +283,7 @@ function walkTo(target) {
 
 function onVerbClick(verb) {
   if (state.gameOver) return;
+  AudioEngine.playUIBlip();
   state.selectedVerb = (state.selectedVerb === verb) ? null : verb;
   state.selectedItem = null;
   renderVerbs();
@@ -274,6 +300,7 @@ function onItemClick(itemId) {
     if (item.look === 'READ_NOTE') {
       state.flags.knowsCode = true;
       setText("A hasty scrawl: '7-2-9-4. Don't forget it this time. —M' Huh. Handy.");
+      saveGame();
     } else {
       setText(item.look);
     }
@@ -302,6 +329,7 @@ function onItemClick(itemId) {
     return;
   }
 
+  AudioEngine.playUIBlip();
   state.selectedItem = (state.selectedItem === itemId) ? null : itemId;
   state.selectedVerb = null;
   renderVerbs();
@@ -324,6 +352,7 @@ function tryCombine(itemA, itemB) {
   state.selectedVerb = null;
   renderVerbs();
   renderInventory();
+  saveGame();
 }
 
 async function onHotspotClick(hotspot) {
@@ -357,14 +386,15 @@ async function onHotspotClick(hotspot) {
 
   if (result === 'ENDING') {
     playEnding();
-  } else if (result) {
-    setText(result);
+  } else {
+    if (result) setText(result);
+    saveGame();
   }
 }
 
 function onGroundClick(evt) {
   if (state.busy || state.gameOver || state.dialogueOpen) return;
-  if (evt.target !== roomEl && evt.target !== roomBgEl) return;
+  if (evt.target.closest('.hotspot')) return;
   if (state.selectedVerb || state.selectedItem) {
     state.selectedVerb = null;
     state.selectedItem = null;
@@ -382,6 +412,8 @@ function onGroundClick(evt) {
 
 function playEnding() {
   state.gameOver = true;
+  clearSave();
+  AudioEngine.stopAmbience();
   setText("The power cell locks into place. The console shudders awake.");
   const overlay = document.createElement('div');
   overlay.id = 'ending-overlay';
@@ -389,14 +421,76 @@ function playEnding() {
     <div class="ending-glow"></div>
     <h1>TO BE CONTINUED...</h1>
     <p>The console screen flickers, and for just a moment, it shows something that shouldn't exist.<br>Something with teeth. Something from a very, very long time ago.</p>
+    <button id="btn-play-again" class="title-btn">Play Again</button>
   `;
   document.getElementById('game').appendChild(overlay);
   setTimeout(() => overlay.classList.add('active'), 20);
+  overlay.querySelector('#btn-play-again').addEventListener('click', () => {
+    AudioEngine.playUIBlip();
+    restartGame();
+  });
+}
+
+function restartGame() {
+  const overlay = document.getElementById('ending-overlay');
+  if (overlay) overlay.remove();
+
+  state.items = [];
+  state.flags = {};
+  state.selectedVerb = null;
+  state.selectedItem = null;
+  state.dialogueOpen = false;
+  state.gameOver = false;
+  state.busy = false;
+  closeDialogue();
+
+  const continueBtn = document.getElementById('btn-continue');
+  const startBtn = document.getElementById('btn-start');
+  continueBtn.classList.add('hidden');
+  startBtn.textContent = 'Start';
+  document.getElementById('title-screen').classList.remove('hidden');
+}
+
+/* ===================== Save / load ===================== */
+
+const SAVE_KEY = 'dinoIslandSave';
+
+function saveGame() {
+  if (state.gameOver) return;
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      currentRoomId: state.currentRoomId,
+      items: state.items,
+      flags: state.flags,
+    }));
+  } catch (e) {}
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function clearSave() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
 }
 
 /* ===================== Init ===================== */
 
-function init() {
+function setupMuteButton() {
+  const btn = document.getElementById('mute-btn');
+  function refresh() { btn.textContent = AudioEngine.isMuted() ? '🔇' : '🔊'; }
+  refresh();
+  btn.addEventListener('click', () => { AudioEngine.toggleMute(); refresh(); });
+}
+
+/* One-time DOM wiring — must run exactly once per page load, even though a game can be
+   (re)started multiple times via Play Again / New Game. */
+function setupOnce() {
   stageEl = document.getElementById('stage');
   roomEl = document.getElementById('room');
   roomBgEl = document.getElementById('room-bg');
@@ -411,15 +505,47 @@ function init() {
 
   roomEl.addEventListener('click', onGroundClick);
   setupHoverDelegation();
+  setupMuteButton();
+}
 
-  state.currentRoomId = START_ROOM;
-  state.pos = { ...ROOMS[START_ROOM].entryPoint };
+/* Runs every time a game session begins (fresh Start, Continue, or Play Again → Start). */
+function startGame(save) {
+  if (save) {
+    state.currentRoomId = save.currentRoomId;
+    state.items = save.items || [];
+    state.flags = save.flags || {};
+  } else {
+    state.currentRoomId = START_ROOM;
+  }
+  state.pos = { ...ROOMS[state.currentRoomId].entryPoint };
 
   renderVerbs();
   renderInventory();
   renderRoom();
   updateCharacterPosition();
-  setText("The dock creaks underfoot. Not exactly the tropical paradise the brochure promised.");
+  AudioEngine.startAmbience(state.currentRoomId);
+  setText(save
+    ? "Right, where was I..."
+    : "The dock creaks underfoot. Not exactly the tropical paradise the brochure promised.");
 }
 
-document.addEventListener('DOMContentLoaded', init);
+function beginGame(save) {
+  AudioEngine.init();
+  if (!save) clearSave();
+  document.getElementById('title-screen').classList.add('hidden');
+  startGame(save);
+}
+
+function initTitleScreen() {
+  setupOnce();
+  const continueBtn = document.getElementById('btn-continue');
+  const startBtn = document.getElementById('btn-start');
+  if (loadGame()) {
+    continueBtn.classList.remove('hidden');
+    startBtn.textContent = 'New Game';
+  }
+  continueBtn.addEventListener('click', () => beginGame(loadGame()));
+  startBtn.addEventListener('click', () => beginGame(null));
+}
+
+document.addEventListener('DOMContentLoaded', initTitleScreen);

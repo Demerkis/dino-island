@@ -43,11 +43,18 @@ body {
 #hotspots {
   position: absolute;
   inset: 0;
+  pointer-events: none;
 }
 
 .hotspot {
   position: absolute;
   cursor: pointer;
+  pointer-events: auto;
+  border-radius: 4px;
+  transition: box-shadow 0.15s ease;
+}
+.hotspot:hover {
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35);
 }
 
 #character {
@@ -193,3 +200,111 @@ body {
   animation: pulseglow 3s ease-in-out infinite;
 }
 @keyframes pulseglow { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
+
+/* ===== ambient background animation ===== */
+.cloud { animation: driftCloud 60s linear infinite; }
+.cloud1 { animation-duration: 70s; }
+.cloud2 { animation-duration: 95s; animation-delay: -20s; }
+@keyframes driftCloud {
+  from { transform: translateX(-60px); }
+  to   { transform: translateX(860px); }
+}
+
+.waves { animation: waveShift 5s ease-in-out infinite alternate; }
+@keyframes waveShift { from { transform: translateX(0); } to { transform: translateX(10px); } }
+
+.seagull { animation: glideGull 6s ease-in-out infinite; transform-origin: 445px 84px; }
+@keyframes glideGull {
+  0%, 100% { transform: translate(0,0) rotate(0deg); }
+  50% { transform: translate(6px,-5px) rotate(-4deg); }
+}
+
+.sun-glow { animation: sunPulse 5s ease-in-out infinite; }
+@keyframes sunPulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+
+.dust { animation: floatDust 12s ease-in-out infinite; }
+.dust2 { animation-duration: 15s; animation-delay: -4s; }
+.dust3 { animation-duration: 9s; animation-delay: -2s; }
+@keyframes floatDust {
+  0%, 100% { transform: translate(0,0); opacity: 0.3; }
+  50% { transform: translate(8px,-14px); opacity: 0.55; }
+}
+
+.bnk-flicker { animation: bnkFlicker 7s ease-in-out infinite; }
+@keyframes bnkFlicker {
+  0%, 92%, 100% { opacity: 0; }
+  93% { opacity: 0.12; }
+  94% { opacity: 0.02; }
+  96% { opacity: 0.1; }
+}
+
+/* ===== mute button ===== */
+#mute-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(0,0,0,0.4);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#mute-btn:hover { background: rgba(0,0,0,0.6); }
+
+/* ===== title screen ===== */
+#title-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px;
+  background: linear-gradient(180deg, #bfe6f7 0%, #eaf7ea 55%, #4f9dbf 55%, #2e6f8f 100%);
+}
+#title-screen.hidden { display: none; }
+#title-screen h1 {
+  font-size: 48px;
+  letter-spacing: 6px;
+  margin: 0 0 6px;
+  color: #2c4a3a;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.4);
+}
+#title-screen .tagline {
+  margin: 0 0 30px;
+  color: #234a55;
+  font-size: 14px;
+  font-style: italic;
+}
+#title-buttons { display: flex; gap: 14px; }
+
+.title-btn {
+  background: #e8c15a;
+  border: 2px solid #26261a;
+  color: #26261a;
+  font-family: inherit;
+  font-weight: bold;
+  font-size: 15px;
+  padding: 10px 24px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.title-btn:hover { background: #f2d179; }
+.title-btn.hidden { display: none; }
+
+#ending-overlay .title-btn {
+  margin-top: 28px;
+  background: #8fffe0;
+  border-color: #0c1a16;
+}
+#ending-overlay .title-btn:hover { background: #b3ffe9; }

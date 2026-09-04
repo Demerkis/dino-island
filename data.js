@@ -144,8 +144,10 @@ const ROOMS = {
 
           <rect x="0" y="0" width="${ROOM_W}" height="260" fill="url(#skyDock)"/>
           <circle cx="680" cy="70" r="42" fill="#fff6d8" opacity="0.9"/>
+          <g class="cloud cloud1"><ellipse cx="0" cy="55" rx="34" ry="13" fill="#fff" opacity="0.8"/><ellipse cx="26" cy="48" rx="24" ry="11" fill="#fff" opacity="0.8"/></g>
+          <g class="cloud cloud2"><ellipse cx="0" cy="105" rx="26" ry="10" fill="#fff" opacity="0.6"/><ellipse cx="20" cy="100" rx="18" ry="8" fill="#fff" opacity="0.6"/></g>
           <rect x="0" y="230" width="${ROOM_W}" height="150" fill="url(#seaDock)"/>
-          ${[0,1,2,3,4].map(i => `<path d="M ${20+i*170} 300 q 30 -10 60 0" stroke="#eaf7f7" stroke-width="3" fill="none" opacity="0.5"/>`).join('')}
+          <g class="waves">${[0,1,2,3,4].map(i => `<path d="M ${20+i*170} 300 q 30 -10 60 0" stroke="#eaf7f7" stroke-width="3" fill="none" opacity="0.5"/>`).join('')}</g>
 
           <!-- dock planks -->
           <rect x="20" y="330" width="740" height="100" fill="url(#woodDock)"/>
@@ -177,7 +179,7 @@ const ROOMS = {
           </g>
 
           <!-- seagull -->
-          <path d="M 430 90 Q 445 78 460 90 Q 445 84 430 90" stroke="#555" stroke-width="3" fill="none"/>
+          <g class="seagull"><path d="M 430 90 Q 445 78 460 90 Q 445 84 430 90" stroke="#555" stroke-width="3" fill="none"/></g>
 
           ${!state.items.includes('crank') && shedOpen ? `
           <g transform="translate(665,270)">
@@ -278,7 +280,12 @@ const ROOMS = {
           <rect x="580" y="60" width="150" height="110" fill="#bfe6f7" stroke="#5a4a37" stroke-width="8"/>
           <line x1="655" y1="60" x2="655" y2="170" stroke="#5a4a37" stroke-width="6"/>
           <line x1="580" y1="115" x2="730" y2="115" stroke="#5a4a37" stroke-width="6"/>
-          <circle cx="700" cy="90" r="16" fill="#fff6d8" opacity="0.85"/>
+          <circle class="sun-glow" cx="700" cy="90" r="16" fill="#fff6d8" opacity="0.85"/>
+
+          <!-- dust motes -->
+          <circle class="dust dust1" cx="420" cy="180" r="2" fill="#fff6d8" opacity="0.5"/>
+          <circle class="dust dust2" cx="500" cy="230" r="1.6" fill="#fff6d8" opacity="0.4"/>
+          <circle class="dust dust3" cx="360" cy="140" r="1.4" fill="#fff6d8" opacity="0.35"/>
 
           <!-- desk -->
           <g transform="translate(60,270)">
@@ -413,6 +420,7 @@ const ROOMS = {
 
           <rect x="0" y="0" width="${ROOM_W}" height="330" fill="url(#wallBnk)"/>
           <rect x="0" y="330" width="${ROOM_W}" height="120" fill="url(#floorBnk)"/>
+          <rect class="bnk-flicker" x="0" y="0" width="${ROOM_W}" height="${ROOM_H}" fill="#000" opacity="0"/>
 
           <!-- rock cracks -->
           <path d="M0 0 L60 120 L20 200" stroke="#0d1414" stroke-width="4" fill="none" opacity="0.6"/>
