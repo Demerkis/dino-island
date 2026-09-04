@@ -62,6 +62,33 @@ const COMBOS = [
   },
 ];
 
+/* ===================== Dialogue portraits ===================== */
+
+const PORTRAITS = {
+  player: `
+    <svg viewBox="0 0 120 120">
+      <rect x="0" y="0" width="120" height="120" fill="#2a2f38"/>
+      <path d="M10 120 Q10 78 60 78 Q110 78 110 120 Z" fill="#c94f4f"/>
+      <circle cx="60" cy="55" r="34" fill="#e0a877"/>
+      <path d="M24 50 Q60 4 96 50 Q96 24 60 20 Q24 24 24 50" fill="#2b2b2b"/>
+      <circle cx="46" cy="52" r="3" fill="#2b2b2b"/>
+      <circle cx="74" cy="52" r="3" fill="#2b2b2b"/>
+      <ellipse class="portrait-mouth" cx="60" cy="72" rx="10" ry="4" fill="#7a3b3b"/>
+    </svg>
+  `,
+  scientist: `
+    <svg viewBox="0 0 120 120">
+      <rect x="0" y="0" width="120" height="120" fill="#2a2f38"/>
+      <path d="M10 120 Q10 78 60 78 Q110 78 110 120 Z" fill="#e3ddd2"/>
+      <circle cx="60" cy="55" r="34" fill="#c99a72"/>
+      <path d="M12 50 Q60 -6 108 50 Q108 20 60 16 Q12 20 12 50" fill="#3a3a3a"/>
+      <circle cx="46" cy="52" r="3" fill="#2b2b2b"/>
+      <circle cx="74" cy="52" r="3" fill="#2b2b2b"/>
+      <ellipse class="portrait-mouth" cx="60" cy="72" rx="9" ry="3.5" fill="#7a4a3b"/>
+    </svg>
+  `,
+};
+
 /* ===================== Dialogue: the Scientist ===================== */
 
 const SCIENTIST_TOPICS = [
@@ -239,9 +266,10 @@ const ROOMS = {
       },
       {
         id: 'toInterior', name: 'Path to the Station', rect: { x: 730, y: 340, w: 60, h: 90 },
-        interactionPoint: { x: 745, y: 400 },
+        interactionPoint: { x: 745, y: 400 }, isExit: true,
         actions: {
           look: () => "A gravel path leads up to the station building.",
+          go: (state) => goToRoom(state, 'interior'),
           use: (state) => goToRoom(state, 'interior'),
           open: (state) => goToRoom(state, 'interior'),
         },
@@ -370,18 +398,23 @@ const ROOMS = {
       },
       {
         id: 'toDock', name: 'Door to the Dock', rect: { x: 730, y: 330, w: 60, h: 90 },
-        interactionPoint: { x: 745, y: 400 },
+        interactionPoint: { x: 745, y: 400 }, isExit: true,
         actions: {
           look: () => "The gravel path back down to the dock.",
+          go: (state) => goToRoom(state, 'dock'),
           use: (state) => goToRoom(state, 'dock'),
           open: (state) => goToRoom(state, 'dock'),
         },
       },
       {
         id: 'bunkerDoor', name: 'Bunker Hatch', rect: { x: 20, y: 340, w: 40, h: 80 },
-        interactionPoint: { x: 55, y: 400 },
+        interactionPoint: { x: 55, y: 400 }, isExit: true,
         actions: {
           look: (state) => state.flags.knowsCode ? "A reinforced hatch with a keypad. I know the code now." : "A reinforced hatch with a keypad. It's not opening without a code.",
+          go: (state) => {
+            if (!state.flags.knowsCode) return "There's a keypad here, but I don't know the code. Yet.";
+            return goToRoom(state, 'bunker');
+          },
           open: (state) => {
             if (!state.flags.knowsCode) return "There's a keypad here, but I don't know the code. Yet.";
             return goToRoom(state, 'bunker');
@@ -441,6 +474,16 @@ const ROOMS = {
             <rect x="20" y="85" width="30" height="20" fill="${powered ? '#8fffe0' : '#232323'}" opacity="0.8"/>
             <circle cx="110" cy="95" r="14" fill="${powered ? '#c9ff8f' : '#232323'}" opacity="0.8"/>
           </g>
+
+          <!-- blast door to the containment chamber -->
+          <g transform="translate(640,300)">
+            <rect x="0" y="0" width="70" height="110" fill="#20282e" stroke="#3a4650" stroke-width="4"/>
+            ${powered
+              ? `<rect x="8" y="8" width="54" height="94" fill="#05100c"/>
+                 <rect x="8" y="8" width="54" height="94" fill="url(#glowBnk)" opacity="0.5"/>`
+              : `<line x1="35" y1="8" x2="35" y2="102" stroke="#3a4650" stroke-width="3"/>
+                 <circle cx="35" cy="55" r="3" fill="#5a6a70"/>`}
+          </g>
         </svg>
       `;
     },
@@ -457,7 +500,7 @@ const ROOMS = {
             if (itemId === 'powercell') {
               state.flags.consolePowered = true;
               removeItem(state, 'powercell');
-              return "ENDING";
+              return "The power cell locks into place. The console shudders awake — and somewhere deeper in the rock, something heavy grinds open.";
             }
             if (itemId) return "That doesn't fit the socket. Close, but no.";
             return "It needs power. An empty socket stares back at me expectantly.";
@@ -466,11 +509,121 @@ const ROOMS = {
       },
       {
         id: 'toInteriorFromBunker', name: 'Hatch', rect: { x: 20, y: 340, w: 50, h: 80 },
-        interactionPoint: { x: 60, y: 400 },
+        interactionPoint: { x: 60, y: 400 }, isExit: true,
         actions: {
           look: () => "The hatch back up to the station.",
+          go: (state) => goToRoom(state, 'interior'),
           use: (state) => goToRoom(state, 'interior'),
           open: (state) => goToRoom(state, 'interior'),
+        },
+      },
+      {
+        id: 'toCages', name: 'Blast Door', rect: { x: 640, y: 300, w: 70, h: 110 },
+        interactionPoint: { x: 660, y: 400 }, isExit: true,
+        visible: (state) => !!state.flags.consolePowered,
+        actions: {
+          look: () => "A reinforced blast door, standing open now that the console's running. Cold air drifts up from whatever's beyond it.",
+          go: (state) => goToRoom(state, 'cages'),
+          use: (state) => goToRoom(state, 'cages'),
+          open: (state) => goToRoom(state, 'cages'),
+        },
+      },
+    ],
+  },
+
+  /* ---------------- Containment Chamber ---------------- */
+  cages: {
+    id: 'cages',
+    name: 'Containment Chamber',
+    walkableArea: [
+      { x: 60, y: 340 }, { x: 740, y: 340 }, { x: 740, y: 420 }, { x: 60, y: 420 },
+    ],
+    entryPoint: { x: 100, y: 390 },
+    background(state) {
+      return `
+        <svg viewBox="0 0 ${ROOM_W} ${ROOM_H}" width="100%" height="100%" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="wallCage" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#20242c"/>
+              <stop offset="100%" stop-color="#12141a"/>
+            </linearGradient>
+            <linearGradient id="floorCage" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2a2a2a"/>
+              <stop offset="100%" stop-color="#161616"/>
+            </linearGradient>
+            <radialGradient id="cageSpot" cx="50%" cy="30%" r="60%">
+              <stop offset="0%" stop-color="#9fd3ff" stop-opacity="0.15"/>
+              <stop offset="100%" stop-color="#9fd3ff" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <rect x="0" y="0" width="${ROOM_W}" height="340" fill="url(#wallCage)"/>
+          <rect x="0" y="340" width="${ROOM_W}" height="110" fill="url(#floorCage)"/>
+          <ellipse class="cage-spot" cx="400" cy="120" rx="380" ry="200" fill="url(#cageSpot)"/>
+
+          <!-- occupied cage (left) -->
+          <g transform="translate(120,150)">
+            <rect x="0" y="0" width="220" height="190" fill="none" stroke="#4a5560" stroke-width="6"/>
+            ${[0,1,2,3,4,5,6,7,8,9,10].map(i => `<line x1="${i*22}" y1="0" x2="${i*22}" y2="190" stroke="#3a444d" stroke-width="3"/>`).join('')}
+            <g class="raptor" transform="translate(60,90)">
+              <path d="M0 60 Q10 20 55 15 Q95 12 110 30 L100 40 Q80 30 55 34 Q25 38 15 65 Z" fill="#5c6b4a"/>
+              <path class="raptor-tail" d="M0 55 Q-30 50 -46 30" stroke="#5c6b4a" stroke-width="10" fill="none" stroke-linecap="round"/>
+              <circle class="raptor-eye" cx="98" cy="26" r="3" fill="#ffe08a"/>
+              <path d="M55 34 Q40 60 20 66" stroke="#48543a" stroke-width="6" fill="none"/>
+            </g>
+          </g>
+
+          <!-- broken open cage (right) -->
+          <g transform="translate(460,150)">
+            <rect x="0" y="0" width="220" height="190" fill="none" stroke="#4a5560" stroke-width="6"/>
+            ${[0,1,2,3,4,5,6,7,8,9,10].map(i => `<line x1="${i*22}" y1="0" x2="${i*22}" y2="190" stroke="#3a444d" stroke-width="3" opacity="${i>=4&&i<=6?0:1}"/>`).join('')}
+            <path d="M88 0 L86 190" stroke="#20242c" stroke-width="4"/>
+            <path d="M132 0 L150 40 L120 90 L150 190" stroke="#4a5560" stroke-width="6" fill="none"/>
+            <path d="M40 185 Q60 175 55 165 Q70 172 68 158 Q85 168 80 150" stroke="#2a2a2a" stroke-width="3" fill="none" opacity="0.7"/>
+          </g>
+
+          <!-- placard -->
+          <g transform="translate(210,360)">
+            <rect x="0" y="0" width="90" height="26" fill="#1a1e24" stroke="#4a5560" stroke-width="2"/>
+          </g>
+        </svg>
+      `;
+    },
+    hotspots: [
+      {
+        id: 'raptorCage', name: 'Occupied Cage', rect: { x: 120, y: 150, w: 220, h: 190 },
+        interactionPoint: { x: 230, y: 340 },
+        actions: {
+          look: () => "Behind reinforced glass and steel, something crouches low, watching. Its eye tracks me across the room without the rest of it moving at all.",
+          push: () => "Absolutely not.",
+          talk: () => "It tilts its head. I decide against small talk with the apex predator.",
+        },
+      },
+      {
+        id: 'openCage', name: 'Empty Cage', rect: { x: 460, y: 150, w: 220, h: 190 },
+        interactionPoint: { x: 570, y: 340 },
+        actions: {
+          look: (state) => {
+            state.flags.sawOpenCage = true;
+            return "ENDING";
+          },
+        },
+      },
+      {
+        id: 'placard', name: 'Placard', rect: { x: 210, y: 360, w: 90, h: 26 },
+        interactionPoint: { x: 255, y: 400 },
+        actions: {
+          look: () => "\"SPECIMEN 07 — DO NOT APPROACH GLASS.\" Someone has scratched a second line beneath it, hurriedly: \"IT COUNTS.\"",
+        },
+      },
+      {
+        id: 'toBunkerFromCages', name: 'Blast Door', rect: { x: 20, y: 340, w: 50, h: 80 },
+        interactionPoint: { x: 60, y: 400 }, isExit: true,
+        actions: {
+          look: () => "The blast door back to the bunker.",
+          go: (state) => goToRoom(state, 'bunker'),
+          use: (state) => goToRoom(state, 'bunker'),
+          open: (state) => goToRoom(state, 'bunker'),
         },
       },
     ],

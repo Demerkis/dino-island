@@ -97,17 +97,48 @@ body {
   border-top: 2px solid #2a2a33;
   border-bottom: 2px solid #2a2a33;
   min-height: 34px;
+  cursor: pointer;
 }
 
 #dialogue-panel {
   background: #1a1a22;
-  padding: 8px 14px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   border-bottom: 2px solid #2a2a33;
 }
 #dialogue-panel.hidden { display: none; }
+
+.dlg-portraits {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.dlg-portrait {
+  width: 64px;
+  height: 64px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 2px solid #3a3a4a;
+  flex-shrink: 0;
+}
+.dlg-portrait svg { width: 100%; height: 100%; display: block; }
+.dlg-portrait.player { border-color: #c94f4f; }
+.dlg-portrait.npc { border-color: #9fd3ff; margin-left: auto; }
+.portrait-mouth { transform-origin: center; transition: transform 0.08s ease; }
+.dlg-portrait.talking .portrait-mouth { animation: talkMouth 0.22s ease-in-out infinite; }
+@keyframes talkMouth {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.35); }
+}
+
+.dlg-topics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .dlg-topic {
   background: none;
   border: none;
@@ -308,3 +339,47 @@ body {
   border-color: #0c1a16;
 }
 #ending-overlay .title-btn:hover { background: #b3ffe9; }
+
+/* ===== screen shake (cage-room reveal) ===== */
+#stage.shake { animation: stageShake 0.45s ease; }
+@keyframes stageShake {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-6px, 2px); }
+  30% { transform: translate(5px, -3px); }
+  45% { transform: translate(-4px, 3px); }
+  60% { transform: translate(4px, 2px); }
+  75% { transform: translate(-2px, -2px); }
+  90% { transform: translate(2px, 1px); }
+}
+
+/* ===== save toast ===== */
+#save-toast {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  background: rgba(0,0,0,0.55);
+  color: #cdeee0;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 5;
+}
+#save-toast.show { opacity: 1; }
+
+/* ===== cage room ===== */
+.cage-spot { animation: cageSpotPulse 6s ease-in-out infinite; }
+@keyframes cageSpotPulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+
+.raptor-eye { animation: raptorBlink 4s ease-in-out infinite; transform-origin: center; }
+@keyframes raptorBlink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+.raptor-tail { animation: raptorTail 3s ease-in-out infinite; transform-origin: 0px 55px; }
+@keyframes raptorTail {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-6deg); }
+}

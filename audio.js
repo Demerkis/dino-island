@@ -184,5 +184,140 @@ const AudioEngine = (() => {
     }
   }
 
-  return { init, isMuted, toggleMute, playFootstep, playUIBlip, playTalkBlip, startAmbience, stopAmbience };
+  function playRoar() {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(70, t);
+    osc.frequency.exponentialRampToValueAtTime(140, t + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(55, t + 0.9);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(300, t);
+    filter.frequency.exponentialRampToValueAtTime(900, t + 0.15);
+    filter.frequency.exponentialRampToValueAtTime(150, t + 0.9);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.35, t + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.0);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+    osc.start(t);
+    osc.stop(t + 1.0);
+
+    const noiseSrc = ctx.createBufferSource();
+    noiseSrc.buffer = getNoiseBuffer();
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    noiseFilter.frequency.value = 500;
+    noiseFilter.Q.value = 1;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.0001, t);
+    noiseGain.gain.linearRampToValueAtTime(0.15, t + 0.1);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    noiseSrc.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(masterGain);
+    noiseSrc.start(t);
+    noiseSrc.stop(t + 0.8);
+  }
+
+  /* ===== music: a tiny note sequencer, layered quietly under the ambience above ===== */
+
+  const NOTE_FREQ = {
+    A3: 220.00, B3: 246.94, C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00,
+    A4: 440.00, B4: 493.88, C5: 523.25, D5: 587.33, E5: 659.25, G5: 783.99,
+  };
+
+  // Each theme: beatMs = duration of one beat unit; notes = [noteName|null, beats][].
+  const THEMES = {
+    title: {
+      beatMs: 230, type: 'triangle', gain: 0.09,
+      notes: [
+        ['C4',1],['E4',1],['G4',1],['E4',1],['A4',1],['G4',1],['E4',1],['D4',1],
+        ['C4',1],['E4',1],['G4',1],['A4',1],['G4',1],['E4',1],['D4',1],[null,1],
+      ],
+    },
+    dock: {
+      beatMs: 260, type: 'triangle', gain: 0.05,
+      notes: [['C4',1],['E4',1],['G4',1],['E4',1],['A4',1],['G4',1],['E4',1],[null,1]],
+    },
+    interior: {
+      beatMs: 400, type: 'sine', gain: 0.035,
+      notes: [['E4',2],[null,1],['D4',2],[null,1],['C4',2],[null,2]],
+    },
+    bunker: {
+      beatMs: 520, type: 'sawtooth', gain: 0.03,
+      notes: [['A3',4],[null,2],['C4',1],[null,1],['A3',2],[null,4]],
+    },
+    cages: {
+      beatMs: 420, type: 'sawtooth', gain: 0.045,
+      notes: [['A3',2],['C4',1],[null,1],['A3',2],['B3',1],[null,1],['A3',2],[null,2]],
+    },
+  };
+
+  let musicGain = null;
+  let musicTimer = null;
+  let currentThemeId = null;
+
+  function ensureMusicGain() {
+    if (!musicGain) {
+      musicGain = ctx.createGain();
+      musicGain.gain.value = 1;
+      musicGain.connect(masterGain);
+    }
+  }
+
+  function scheduleNote(freq, startTime, durSec, type, gainVal) {
+    const osc = ctx.createOscillator();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const gain = ctx.createGain();
+    const attack = Math.min(0.05, durSec * 0.2);
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.linearRampToValueAtTime(gainVal, startTime + attack);
+    gain.gain.setValueAtTime(gainVal, Math.max(startTime + attack, startTime + durSec - Math.min(0.15, durSec * 0.3)));
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + durSec);
+    osc.connect(gain);
+    gain.connect(musicGain);
+    osc.start(startTime);
+    osc.stop(startTime + durSec + 0.02);
+  }
+
+  function playThemeOnce(theme, startTime) {
+    let t = startTime;
+    theme.notes.forEach(([note, beats]) => {
+      const dur = beats * theme.beatMs / 1000;
+      if (note) scheduleNote(NOTE_FREQ[note], t, dur * 0.92, theme.type, theme.gain);
+      t += dur;
+    });
+    return t - startTime;
+  }
+
+  function stopMusic() {
+    if (musicTimer) { clearTimeout(musicTimer); musicTimer = null; }
+    currentThemeId = null;
+  }
+
+  function playMusic(themeId) {
+    if (!ctx || themeId === currentThemeId) return;
+    stopMusic();
+    const theme = THEMES[themeId];
+    if (!theme) return;
+    ensureMusicGain();
+    currentThemeId = themeId;
+    const loop = () => {
+      const dur = playThemeOnce(theme, ctx.currentTime + 0.05);
+      musicTimer = setTimeout(loop, dur * 1000);
+    };
+    loop();
+  }
+
+  return {
+    init, isMuted, toggleMute, playFootstep, playUIBlip, playTalkBlip, playRoar,
+    startAmbience, stopAmbience, playMusic, stopMusic,
+  };
 })();

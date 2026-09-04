@@ -81,6 +81,11 @@ function goToRoom(state, roomId) {
     renderRoom();
     updateCharacterPosition();
     AudioEngine.startAmbience(roomId);
+    AudioEngine.playMusic(roomId);
+    if (roomId === 'cages') {
+      AudioEngine.playRoar();
+      triggerShake();
+    }
     saveGame();
     setTimeout(() => fadeEl.classList.remove('active'), 30);
   }, 260);
@@ -102,6 +107,17 @@ function renderDialogue() {
   const topics = SCIENTIST_TOPICS.filter(t => t.condition(state));
   dialogueEl.classList.remove('hidden');
   dialogueEl.innerHTML = '';
+
+  const portraits = document.createElement('div');
+  portraits.className = 'dlg-portraits';
+  portraits.innerHTML = `
+    <div class="dlg-portrait player">${PORTRAITS.player}</div>
+    <div class="dlg-portrait npc">${PORTRAITS.scientist}</div>
+  `;
+  dialogueEl.appendChild(portraits);
+
+  const topicsWrap = document.createElement('div');
+  topicsWrap.className = 'dlg-topics';
   topics.forEach(t => {
     const btn = document.createElement('button');
     btn.className = 'dlg-topic';
@@ -112,30 +128,41 @@ function renderDialogue() {
       setText(response);
       renderInventory();
       renderDialogue();
+      animateTalkingPortrait(response);
       saveGame();
     });
-    dialogueEl.appendChild(btn);
+    topicsWrap.appendChild(btn);
   });
   const bye = document.createElement('button');
   bye.className = 'dlg-topic dlg-bye';
   bye.textContent = 'Goodbye.';
   bye.addEventListener('click', () => { AudioEngine.playUIBlip(); closeDialogue(); });
-  dialogueEl.appendChild(bye);
+  topicsWrap.appendChild(bye);
+  dialogueEl.appendChild(topicsWrap);
+}
+
+function animateTalkingPortrait(msg) {
+  const portrait = dialogueEl.querySelector('.dlg-portrait.npc');
+  if (!portrait) return;
+  portrait.classList.add('talking');
+  setTimeout(() => portrait.classList.remove('talking'), msg.length * 16 + 120);
 }
 
 /* ===================== Rendering ===================== */
 
 let textGen = 0;
+let textRevealing = false;
 
 function setText(msg) {
   if (!msg) return;
   state.lastMessage = msg;
   const myGen = ++textGen;
   textEl.textContent = '';
+  textRevealing = true;
   let i = 0;
   function tick() {
     if (myGen !== textGen) return;
-    if (i >= msg.length) return;
+    if (i >= msg.length) { textRevealing = false; return; }
     textEl.textContent += msg[i];
     i++;
     if (i % 2 === 0) AudioEngine.playTalkBlip();
@@ -144,13 +171,22 @@ function setText(msg) {
   tick();
 }
 
+function skipTextReveal() {
+  if (!textRevealing) return;
+  textEl.textContent = state.lastMessage;
+  textRevealing = false;
+  textGen++;
+}
+
 function showHover(msg) {
   textGen++;
+  textRevealing = false;
   textEl.textContent = msg;
 }
 
 function restoreText() {
   textGen++;
+  textRevealing = false;
   textEl.textContent = state.lastMessage || ' ';
 }
 
@@ -375,6 +411,8 @@ async function onHotspotClick(hotspot) {
     const key = VERB_KEYS[verb];
     const handler = hotspot.actions[key];
     result = handler ? handler(state, null) : fallback(key);
+  } else if (hotspot.isExit && hotspot.actions.go) {
+    result = hotspot.actions.go(state);
   } else {
     result = hotspot.actions.look ? hotspot.actions.look(state) : fallback('look');
   }
@@ -414,13 +452,14 @@ function playEnding() {
   state.gameOver = true;
   clearSave();
   AudioEngine.stopAmbience();
-  setText("The power cell locks into place. The console shudders awake.");
+  AudioEngine.stopMusic();
+  setText("The door hangs open. Whatever Specimen 07's neighbor was, it isn't in there anymore.");
   const overlay = document.createElement('div');
   overlay.id = 'ending-overlay';
   overlay.innerHTML = `
     <div class="ending-glow"></div>
     <h1>TO BE CONTINUED...</h1>
-    <p>The console screen flickers, and for just a moment, it shows something that shouldn't exist.<br>Something with teeth. Something from a very, very long time ago.</p>
+    <p>Bent steel. An empty cage. And somewhere in the dark beyond the blast door, something that's been loose for who knows how long.<br>Whatever happens next, that's the problem now.</p>
     <button id="btn-play-again" class="title-btn">Play Again</button>
   `;
   document.getElementById('game').appendChild(overlay);
@@ -455,6 +494,16 @@ function restartGame() {
 
 const SAVE_KEY = 'dinoIslandSave';
 
+let saveToastTimer = null;
+
+function showSavedToast() {
+  const toast = document.getElementById('save-toast');
+  if (!toast) return;
+  toast.classList.add('show');
+  clearTimeout(saveToastTimer);
+  saveToastTimer = setTimeout(() => toast.classList.remove('show'), 900);
+}
+
 function saveGame() {
   if (state.gameOver) return;
   try {
@@ -463,6 +512,7 @@ function saveGame() {
       items: state.items,
       flags: state.flags,
     }));
+    showSavedToast();
   } catch (e) {}
 }
 
@@ -506,6 +556,12 @@ function setupOnce() {
   roomEl.addEventListener('click', onGroundClick);
   setupHoverDelegation();
   setupMuteButton();
+  document.getElementById('textline').addEventListener('click', skipTextReveal);
+}
+
+function triggerShake() {
+  stageEl.classList.add('shake');
+  setTimeout(() => stageEl.classList.remove('shake'), 450);
 }
 
 /* Runs every time a game session begins (fresh Start, Continue, or Play Again → Start). */
@@ -524,6 +580,7 @@ function startGame(save) {
   renderRoom();
   updateCharacterPosition();
   AudioEngine.startAmbience(state.currentRoomId);
+  AudioEngine.playMusic(state.currentRoomId);
   setText(save
     ? "Right, where was I..."
     : "The dock creaks underfoot. Not exactly the tropical paradise the brochure promised.");
@@ -531,9 +588,12 @@ function startGame(save) {
 
 function beginGame(save) {
   AudioEngine.init();
+  AudioEngine.playMusic('title');
   if (!save) clearSave();
-  document.getElementById('title-screen').classList.add('hidden');
-  startGame(save);
+  setTimeout(() => {
+    document.getElementById('title-screen').classList.add('hidden');
+    startGame(save);
+  }, 1100);
 }
 
 function initTitleScreen() {
